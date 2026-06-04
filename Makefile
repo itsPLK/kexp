@@ -19,18 +19,19 @@ OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS)) $(BUILD_DIR)/syscall
 
 all: $(BUILD_DIR)/$(BIN)
 
-_ := $(shell mkdir -p $(BUILD_DIR))
-
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.S
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 	
 OBJCOPY := llvm-objcopy
 
-$(BUILD_DIR)/$(BIN): $(OBJS) script.ld $(BUILD_DIR)/syscalls.ld
-	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) -o $(BUILD_DIR)/kexp.elf -Tscript.ld -T$(BUILD_DIR)/syscalls.ld
+$(BUILD_DIR)/$(BIN): $(OBJS) script.ld
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) -o $(BUILD_DIR)/kexp.elf -Tscript.ld
 	$(OBJCOPY) -O binary $(BUILD_DIR)/kexp.elf $@
 
 clean:
