@@ -3,12 +3,15 @@ BIN := kexp.bin
 SRC_DIR := src
 BUILD_DIR := build
 
+KEXP_NO_PTHREADS ?= 0
+
 TARGET := -target x86_64-linux-gnu --sysroot=/usr/x86_64-linux-gnu
 
 CFLAGS := $(TARGET) -O3 -Iinclude \
 		-fPIE -fcommon -fno-omit-frame-pointer -fno-zero-initialized-in-bss \
 		-ffreestanding -nostdlib -nostartfiles \
-	    -Wall -Wextra -Werror -Wno-int-conversion -Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable -Wno-uninitialized
+	    -Wall -Wextra -Werror -Wno-int-conversion -Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable -Wno-uninitialized \
+        -DKEXP_NO_PTHREADS=$(KEXP_NO_PTHREADS)
 
 LDFLAGS := $(TARGET) -fuse-ld=lld -nostdlib -nostartfiles -static -Wl,--build-id=none
 
