@@ -8,8 +8,8 @@ __attribute__((section(".entry"))) int main(payload_args_t *args) {
   if (args == 0)
     return -1;
 
-  init_libkernel_api();
-  init_libc_api();
+  init_libkernel_api(args);
+  init_libc_api(args);
 
   if (logger_init() != 0) {
     notify("unable to init logger !!");

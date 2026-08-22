@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
 
@@ -47,13 +48,75 @@ typedef struct {
   char unk[0x400];
 } NotificationRequest;
 
+/* ---------------------------------------------------------------------------
+ * Optional pre-resolved API table (v2 args extension).
+ *
+ * Some launchers cannot let the payload resolve its own imports: syscall 0x24f
+ * (dlsym) is refused for a WebProcess, so a kexp spawned from the PS5 browser
+ * would hit __builtin_trap() in resolve_symbol(). Such launchers instead fill
+ * api_entries[] with the runtime addresses of every imported function and set
+ * api_magic/api_count; kexp then performs zero dlsym calls. Launchers that do
+ * not know these addresses simply leave the extension zeroed (legacy 0x28
+ * block) and kexp falls back to its internal resolver as before.
+ *
+ * Table layout is a fixed contract (index -> function), matching the order of
+ * libkernel-imports.h + libc-imports.h below:
+ *   [0] sceKernelSendNotificationRequest   (libkernel)
+ *   [1] sysctlbyname                       (libkernel)
+ *   [2] pthread_create                     (libkernel)
+ *   [3] pthread_join                       (libkernel)
+ *   [4] getpid                             (libkernel)
+ *   [5] malloc                             (libSceLibcInternal)
+ *   [6] free                               (libSceLibcInternal)
+ *   [7] memcpy                             (libSceLibcInternal)
+ *   [8] memset                             (libSceLibcInternal)
+ *   [9] strcmp                             (libSceLibcInternal)
+ *   [10] memcmp                            (libSceLibcInternal)
+ *   [11] vsnprintf                         (libSceLibcInternal)
+ * ------------------------------------------------------------------------- */
+#define KEXP_API_MAGIC 0x4B585032U /* 'KXP2' */
+#define KEXP_API_COUNT 12
+
+enum {
+  KEXP_API_NOTIFY = 0,
+  KEXP_API_SYSCTLBYNAME,
+  KEXP_API_PTHREAD_CREATE,
+  KEXP_API_PTHREAD_JOIN,
+  KEXP_API_GETPID,
+  KEXP_API_MALLOC,
+  KEXP_API_FREE,
+  KEXP_API_MEMCPY,
+  KEXP_API_MEMSET,
+  KEXP_API_STRCMP,
+  KEXP_API_MEMCMP,
+  KEXP_API_VSNPRINTF,
+};
+
 typedef struct {
   int master_pipe[2];
   int victim_pipe[2];
   uintptr_t allproc;
   char *elfldr_ptr;
   size_t elfldr_size;
+  /* v2 extension: optional pre-resolved API table (see above). Legacy
+   * launchers pass only the 0x28-byte prefix; reading past it is safe on the
+   * heap and misinterpretation is ruled out by validating magic, count and
+   * pointer before use. */
+  uint32_t api_magic;
+  uint32_t api_count;
+  void **api_entries;
 } payload_args_t;
+
+_Static_assert(offsetof(payload_args_t, elfldr_size) == 0x20,
+               "legacy prefix must stay 0x28 bytes");
+_Static_assert(offsetof(payload_args_t, api_magic) == 0x28,
+               "api_magic offset broke the v2 args contract");
+_Static_assert(offsetof(payload_args_t, api_count) == 0x2C,
+               "api_count offset broke the v2 args contract");
+_Static_assert(offsetof(payload_args_t, api_entries) == 0x30,
+               "api_entries offset broke the v2 args contract");
+_Static_assert(sizeof(payload_args_t) == 0x38,
+               "payload_args_t size broke the v2 args contract");
 
 typedef struct {
   uint32_t cnt;

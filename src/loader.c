@@ -220,9 +220,8 @@ int init_loader_args() {
 
   kread(&rpipe_f_data, rpipe_fp, sizeof(rpipe_f_data));
 
-  void *kernel_getpid;
-  if (dlsym(LIBKERNEL_HANDLE, "getpid", &kernel_getpid) == -1) {
-    log("unable to dlsym getpid !!");
+  if (lk_getpid == 0) {
+    log("getpid was not resolved !!");
     return -1;
   }
 
@@ -232,7 +231,7 @@ int init_loader_args() {
     return -1;
   }
 
-  loader_ctx.args.syscall_wrapper = kernel_getpid;
+  loader_ctx.args.syscall_wrapper = (void *)lk_getpid;
   loader_ctx.args.rwpipe = rwpipe;
   loader_ctx.args.rwpair = rwpair;
   loader_ctx.args.pipe_f_data = rpipe_f_data;
